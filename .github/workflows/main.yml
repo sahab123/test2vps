@@ -1,43 +1,39 @@
-name: CI
-
-on: workflow_dispatch
-
+name: Ubuntu
+on: 
+  workflow_dispatch:
+    inputs:
+      code:
+        description: 'Visit http://remotedesktop.google.com/headless and copy the command after Authentication'
+        required: true
+      pin:
+        description: 'Enter a Pin (more or equal to 6 digits)'
+        required: true
 jobs:
   build:
-
-    runs-on: windows-latest
-    timeout-minutes: 9999
-
+    runs-on: ubuntu-latest
     steps:
-    - name: Download Ngrok & NSSM
-      run: |
-        Invoke-WebRequest https://raw.githubusercontent.com/TheDarkMythos/Ngrok-Exe/master/ngrok.exe -OutFile ngrok.exe
-        Invoke-WebRequest https://raw.githubusercontent.com/aloksharmakumar77/Windows2019RDP-US/main/Files/nssm.exe -OutFile nssm.exe
-    - name: Copy NSSM & Ngrok to Windows Directory.
+    - name: Create User
+      run: sudo useradd -m diwas && sudo adduser diwas sudo && echo 'diwas:diwas' | sudo chpasswd
+    - name: Doanload & Install files
       run: | 
-        copy nssm.exe C:\Windows\System32
-        copy ngrok.exe C:\Windows\System32
-    - name: Connect your NGROK account
-      run: .\ngrok.exe authtoken $Env:NGROK_AUTH_TOKEN
-      env:
-        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
-    - name: Download Important Files.
-      run: |
-        Invoke-WebRequest https://raw.githubusercontent.com/aloksharmakumar77/Windows2019RDP-US/main/Files/NGROK-US.bat -OutFile NGROK-US.bat
-        Invoke-WebRequest https://raw.githubusercontent.com/aloksharmakumar77/Windows2019RDP-US/main/Files/NGROK-CHECK.bat -OutFile NGROK-CHECK.bat
-        Invoke-WebRequest https://raw.githubusercontent.com/aloksharmakumar77/Windows2019RDP-US/main/Files/loop.bat -OutFile loop.bat
-    - name: Make YML file for NGROK.
-      run: start NGROK-US.bat
-    - name: Enable RDP Access.
-      run: | 
-        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server'-name "fDenyTSConnections" -Value 0
-        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
-    - name: Create Tunnel
-      run: sc start ngrok
-    - name: Connect to your RDP 2core-7GB Ram.
-      run: cmd /c NGROK-CHECK.bat
-    - name: All Done! You can close Tab now! Maximum VM time:6h.
-      run: cmd /c loop.bat 
-      
-    
+        echo Update: APT
+        sudo apt update
+        echo Install: Ubuntu Desktop
+        sudo apt install ubuntu-desktop
+        echo Download: Chrome
+        wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+        echo Install: Chrome
+        sudo dpkg --install google-chrome-stable_current_amd64.deb
+        sudo apt install --assume-yes --fix-broken
+        echo Install: Xbase Clients
+        sudo apt-get install xbase-clients python3-psutil xvfb -y
+        echo Install: Chrome Remote Desktop
+        wget https://dl.google.com/linux/direct/chrome-remote-desktop_current_amd64.deb
+        sudo dpkg --install chrome-remote-desktop_current_amd64.deb
+        sudo apt install --assume-yes --fix-broken
+        echo Download: Keep Alive
+        wget https://raw.githubusercontent.com/Diwas007/Ubuntu_RDP/master/loop.sh
+    - name: Start Chrome Remote Desktop
+      run: ${{ github.event.inputs.code }} -pin=${{ github.event.inputs.pin }}
+    - name: Done! You can see the machine in list now.
+      run: bash loop.sh
